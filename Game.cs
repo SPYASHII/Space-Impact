@@ -45,7 +45,7 @@ namespace SpaceImpact
 
                 for (int j = 0; j < mapSizeX; j++)
                 {
-                    Console.Write(map[i,j]);
+                    Console.Write(" ");
                 }
 
                 Console.WriteLine("@");
@@ -58,6 +58,9 @@ namespace SpaceImpact
         {
             Thread.Sleep(50);
 
+            DrawModel(playerY, playerX, playerModel);
+
+            
         }
         static void Input()
         {
@@ -113,13 +116,18 @@ namespace SpaceImpact
                     MovePlayer(0, 1);
                     break;
                 case key.FIRE:
-                    
                     break;
-                //case key.END:
-                //    end_game = false;
-                //    break;
+                case key.END:
+                    for (int i = 0; i < mapSizeY; i++)
+                    {
+                        for (int j = 0; j < mapSizeX; j++)
+                        {
+                            File.AppendAllText(path + @"\debug.txt", string.Concat(map[i,j]));
+                        }
+                        File.AppendAllText(path + @"\debug.txt", "\n");
+                    }
+                    break;
             }
-
         }
         static void Main()
         {
@@ -133,8 +141,11 @@ namespace SpaceImpact
         }
         static void MovePlayer(int modY, int modX)
         {
-            DeleteModel(playerY, playerX, playerModel, currentPlayerPos);
-            InsertModel(playerY += modY, playerX += modX, playerModel, currentPlayerPos);
+            if (playerY + modY + playerModel.GetLength(0) != mapSizeY && playerY + modY >= 0 && playerX + modX + playerModel[0].Length != mapSizeX && playerX + modX >= 0)
+            {
+                DeleteModel(playerY, playerX, playerModel, currentPlayerPos);
+                InsertModel(playerY += modY, playerX += modX, playerModel, currentPlayerPos);
+            }
         }
         static void InsertModel(int y, int x, string [] Model, List<int[]> currentPos)
         {
@@ -154,17 +165,33 @@ namespace SpaceImpact
                 for (int j = 0; j < Model[i].Length; j++)
                 {
                     map[y + i, x + j] = ' ';
+                    Console.SetCursorPosition(x + j + 3, y + i + 1);
+                    Console.Write("\b \b");
                 }
             }
             currentPos.Clear();
         }
-        static void DrawModel(int y, int x)
+        static void DrawModel(int y, int x, string[] Model)
         {
-
+            for (int i = 0; i < Model.GetLength(0); i++)
+            {
+                for (int j = 0; j < Model[i].Length; j++)
+                {
+                    Console.SetCursorPosition(x + j + 2, y + i + 1);
+                    Console.Write(map[y + i, x + j]);
+                }
+            }
         }
-        static void DelModelFromScr(int y, int x)
-        {
-
-        }
+        //static void DelModelFromScr(int y, int x, string[] Model)
+        //{
+        //    for (int i = 0; i < Model.GetLength(0); i++)
+        //    {
+        //        for (int j = 0; j < Model[i].Length; j++)
+        //        {
+        //            Console.SetCursorPosition(x + j + 2, y + i + 1);
+        //            Console.Write("\b \b");
+        //        }
+        //    }
+        //}
     }
 }
