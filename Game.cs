@@ -10,21 +10,27 @@ namespace SpaceImpact
 {
     class Game
     {
+        static Random enemyPos = new Random();
+
         static string path = @"G:\Programming\Space Impact\files";
         static int mapSizeY = 30, mapSizeX = 70;
         static int playerY, playerX;
 
-        static int kostil = 0;
+        static int timerForBullets = 0, timerForEnemies = 0;
 
         static ConsoleKeyInfo button;
         enum key { UP, DOWN, RIGHT, LEFT, FIRE, END, TRASH }
         static key pressed;
 
         static string[] bullet = new string[1] { "->" };
+        static string[] bulletE = new string[1] { "<-" };
 
         static string[] playerModel = new string[File.ReadAllLines(path + @"\player.txt").GetLength(0)];
+        static List<string[]> enemyModels = new List<string[]> { };
 
         static char[,] map = new char[mapSizeY, mapSizeX];
+
+        static List<List<int[]>> currentEnemyPos = new List<List<int[]>> {};
         static List<int[]> currentPlayerPos = new List<int[]> { };
         static List<int[]> currentPlayerBulletPos = new List<int[]> { };
 
@@ -34,6 +40,9 @@ namespace SpaceImpact
             Console.CursorVisible = false;
 
             playerModel = File.ReadAllLines(path + @"\player.txt");
+
+            enemyModels.Add(new string[File.ReadAllLines(path + @"\enemies\enemy0.txt").GetLength(0)]);
+            enemyModels[0] = File.ReadAllLines(path + @"\enemies\enemy0.txt");
 
             playerY = mapSizeY / 2;
             playerX = mapSizeX / 8;
@@ -67,7 +76,11 @@ namespace SpaceImpact
             {
                 DrawModel(currentPlayerBulletPos[i][0], currentPlayerBulletPos[i][1], bullet);
             }
-
+            foreach (var i in currentEnemyPos)
+            {
+                if(i.Count > 0)
+                DrawModel(i[0][0],i[0][1],enemyModels[0]);
+            }
         }
         static void Input()
         {
@@ -137,13 +150,15 @@ namespace SpaceImpact
                     break;
             }
 
-            if (kostil >= 2)
+            SpawnEnemies(2, currentEnemyPos.Count);
+
+            if (timerForBullets >= 2)
             {
-                kostil = 0;
+                timerForBullets = 0;
                 MoveBullet();
             }
         }
-        static void Main()
+        static void Main()                                         //MAIN
         {
             Timer speedOfBullet = new Timer(Timer, null, 0, 50);
             Setup();
@@ -152,6 +167,15 @@ namespace SpaceImpact
                 Logic();
                 Draw();
                 Input();
+            }
+        }
+        static void SpawnEnemies(int max, int countOfEnemy)
+        { 
+            if(timerForEnemies >= 5 && countOfEnemy < max)
+            {
+                currentEnemyPos.Add(new List<int[]> { });
+                timerForEnemies = 0;
+                InsertModel(enemyPos.Next(0, mapSizeY), mapSizeX - enemyModels[0][0].Length - 1, enemyModels[0],currentEnemyPos.Last());
             }
         }
         static void MovePlayer(int modY, int modX)
@@ -218,7 +242,8 @@ namespace SpaceImpact
         }
         static void Timer(object o)
         {
-            kostil++;
+            timerForBullets++;
+            timerForEnemies++;
         }
     }
 }
