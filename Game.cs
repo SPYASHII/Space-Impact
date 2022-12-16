@@ -54,7 +54,7 @@ namespace SpaceImpact
 
             Console.WriteLine();
 
-            for (int i = 0; i < mapSizeY - 1; i++)
+            for (int i = 0; i < mapSizeY; i++)
             {
                 Console.Write("@");
 
@@ -150,7 +150,7 @@ namespace SpaceImpact
                     break;
             }
 
-            SpawnEnemies(2, currentEnemyPos.Count);
+            SpawnEnemies(3, currentEnemyPos.Count);
 
             if (timerForBullets >= 2)
             {
@@ -173,14 +173,55 @@ namespace SpaceImpact
         { 
             if(timerForEnemies >= 5 && countOfEnemy < max)
             {
-                currentEnemyPos.Add(new List<int[]> { });
-                timerForEnemies = 0;
-                InsertModel(enemyPos.Next(0, mapSizeY), mapSizeX - enemyModels[0][0].Length - 1, enemyModels[0],currentEnemyPos.Last());
+                //enemyPos.Next(0, mapSizeY);
+                int[] posY = new int [10];
+                int posX = mapSizeX - enemyModels[0][0].Length - 1, y = 0; 
+                bool spawn = false;
+                if (currentEnemyPos.Count > 0)
+                {
+                    for (int j = 0; j < 10; j++)
+                    {
+                        posY[j] = enemyPos.Next(0, mapSizeY - 1);
+                    }
+
+                    for (int j = 0; j < posY.Length && !spawn; j++)
+                    {
+                        foreach (var i in currentEnemyPos)
+                        {
+                            if (posY[j] + enemyModels[0].GetLength(0) < i[0][0] || posY[j] > i[i.Count - 1][0])
+                            {
+                                y = j;
+                                spawn = true;
+                            }
+                            else if (posX > i[i.Count - 1][1])
+                            {
+                                y = j;
+                                spawn = true;
+                            }
+                            else
+                            {
+                                spawn = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    posY[y] = enemyPos.Next(0, mapSizeY);
+                    spawn = true;
+                }
+
+                if (spawn) {
+                    currentEnemyPos.Add(new List<int[]> { });
+                    timerForEnemies = 0;
+                    InsertModel(posY[y], posX, enemyModels[0], currentEnemyPos.Last());
+                }
             }
         }
         static void MovePlayer(int modY, int modX)
         {
-            if (playerY + modY + playerModel.GetLength(0) != mapSizeY && playerY + modY >= 0 && playerX + modX + playerModel[0].Length != mapSizeX && playerX + modX >= 0)
+            if (playerY + modY + playerModel.GetLength(0) - 1 != mapSizeY && playerY + modY >= 0 && playerX + modX + playerModel[0].Length != mapSizeX && playerX + modX >= 0)
             {
                 DeleteModel(playerY, playerX, playerModel, currentPlayerPos);
                 InsertModel(playerY += modY, playerX += modX, playerModel, currentPlayerPos);
