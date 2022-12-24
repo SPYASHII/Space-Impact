@@ -43,19 +43,27 @@ namespace SpaceImpact
         {
             Console.SetWindowSize(mapSizeX + 3, mapSizeY + 5);
             Console.CursorVisible = false;
-
+            Console.BackgroundColor = ConsoleColor.Green;
+            Console.ForegroundColor = ConsoleColor.Black;
 
             playerModel = File.ReadAllLines(path + @"\player.txt");
 
             enemyModels.Add(new string[File.ReadAllLines(path + @"\enemies\enemy0.txt").GetLength(0)]);
             enemyModels[0] = File.ReadAllLines(path + @"\enemies\enemy0.txt");
 
-            health = 3;
+            health = 5;
 
             playerY = mapSizeY / 2;
             playerX = mapSizeX / 8;
 
             InsertModel(playerY, playerX, playerModel, currentPlayerPos);
+
+            for (int j = 0; j < 3; j++)
+            {
+                for (int i = 0; i < mapSizeX + 3; i++)
+                    Console.Write(" ");
+                Console.WriteLine();
+            }
 
             for (int i = 0; i < mapSizeX + 3; i++)
                 Console.Write("@");
@@ -76,6 +84,8 @@ namespace SpaceImpact
 
             for (int i = 0; i < mapSizeX + 3; i++)
                 Console.Write("@");
+
+            DrawDelHealth();
         }
         static void Draw() //Отрисовка 
         {
@@ -89,8 +99,8 @@ namespace SpaceImpact
                 if(i.Count > 0)
                 DrawModel(i[0][0],i[0][1],enemyModels[0]);
             }
-            Console.SetCursorPosition(0, mapSizeY + 2);
-            Console.Write("|| " + health + " ||");
+
+            DrawDelHealth();
             if(gameover)
             {
                 Console.Clear();
@@ -169,7 +179,7 @@ namespace SpaceImpact
                     break;
             }
 
-            SpawnEnemies(3, currentEnemyPos.Count);
+            SpawnEnemies(10, currentEnemyPos.Count);
             if (timerForBullets >= 2)
             {
                 timerForBullets = 0;
@@ -190,6 +200,7 @@ namespace SpaceImpact
                 Draw();
                 Input();
             }
+
             playerHit.Play();
 
             Thread.Sleep(500);
@@ -266,7 +277,7 @@ namespace SpaceImpact
                 for (int j = 0; j < Model[i].Length; j++)
                 {
                     map[y + i, x + j] = '\0';
-                    Console.SetCursorPosition(x + j + 3, y + i + 1);
+                    Console.SetCursorPosition(x + j + 3, y + i + 1 + 3);
                     Console.Write("\b \b");
                 }
             }
@@ -279,9 +290,33 @@ namespace SpaceImpact
             {
                 for (int j = 0; j < Model[i].Length; j++)
                 {
-                    Console.SetCursorPosition(x + j + 2, y + i + 1);
+                    Console.SetCursorPosition(x + j + 2, y + i + 1 + 3);
                     Console.Write(map[y + i, x + j]);
                 }
+            }
+        }
+        static void DrawDelHealth(bool draw = true)
+        {
+            if (draw)
+            {
+                for (int i = 0; i < health; i++)
+                {
+                    Console.SetCursorPosition(i * 6, 0);
+                    Console.Write("//\\//\\");
+                    Console.SetCursorPosition(i * 6, 1);
+                    Console.Write("\\\\   /");
+                    Console.SetCursorPosition(i * 6, 2);
+                    Console.Write(" \\\\_/");
+                }
+            }
+            else
+            {
+                Console.SetCursorPosition((health) * 6, 0);
+                Console.Write("\b       \b");
+                Console.SetCursorPosition((health) * 6, 1);
+                Console.Write("\b       \b");
+                Console.SetCursorPosition((health) * 6, 2);
+                Console.Write("\b      \b");
             }
         }
         static void MoveBullet() //Передвижение пуль 
@@ -332,11 +367,12 @@ namespace SpaceImpact
                         DeleteModel(y, x, enemyModels[0], i);
                         if (!HitCheck(y, x - modX, enemyModels[0], i))
                             InsertModel(y, x - modX, enemyModels[0], i);
-                        else
+                        else if(SearchAndKill(y, x - modX, true))
                         {
                             currentEnemyPos.Remove(i);
-                            SearchAndKill(y, x - modX, true);
                         }
+                        else
+                            InsertModel(y, x - modX, enemyModels[0], i);
                     }
                     else
                     {
@@ -360,9 +396,9 @@ namespace SpaceImpact
             }
             return false;
         }
-        static void SearchAndKill(int y, int x, bool enemy = false, bool player = false) //Найти модель по координатам и удалить из игры 
+        static bool SearchAndKill(int y, int x, bool enemy = false, bool player = false) //Найти модель по координатам и удалить из игры 
         {
-            int healthBuf = health;
+            bool hit = false;
             if (!enemy)
             {
                 foreach (var i in currentEnemyPos)
@@ -382,26 +418,36 @@ namespace SpaceImpact
                             DeleteModel(i[0][0], i[0][1], enemyModels[0], i);
                             currentEnemyPos.Remove(i);
                             health -= 1;
+                            playerHit.Play();
+                            DrawDelHealth(false);
                             break;
                         }
                 }
             }
             else
             {
-                health -= 1;
+                
                 foreach (var i in currentPlayerBulletPos)
                 {
                     if ((y <= i[0][0] && i[0][0] <= y + enemyModels[0].GetLength(0)) && (x <= i[1][1] || x <= i[0][1]))
                     {
                         DeleteModel(i[0][0], i[0][1], bullet, i);
                         currentPlayerBulletPos.Remove(i);
-                        health += 1;
+                        hit = true;
                         break;
                     }
                 }
+                if (!hit)
+                {
+                    if (y <= currentPlayerPos[currentPlayerPos.Count - 1][0] && x <= currentPlayerPos[currentPlayerPos.Count - 1][1] && y + enemyModels[0].GetLength(0) >= currentPlayerPos[0][0] && x + enemyModels[0][0].Length >= currentPlayerPos[0][1]) {
+                        hit = true;
+                        health -= 1;
+                        DrawDelHealth(false);
+                        playerHit.Play();
+                    }
+                }    
             }
-            if (healthBuf != health)
-                playerHit.Play();
+            return hit;
         }
         static void Timer(object o)
         {
