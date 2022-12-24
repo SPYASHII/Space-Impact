@@ -16,7 +16,7 @@ namespace SpaceImpact
         static int mapSizeY = 30, mapSizeX = 70;
         static int playerY, playerX;
 
-        static int timerForBullets = 0, timerForEnemies = 0;
+        static int timerForBullets = 0, timerForEnemies = 0, timerForMoveEnemies = 0;
 
         static ConsoleKeyInfo button;
         enum key { UP, DOWN, RIGHT, LEFT, FIRE, END, TRASH }
@@ -34,7 +34,7 @@ namespace SpaceImpact
         static List<int[]> currentPlayerPos = new List<int[]> { };
         static List<int[]> currentPlayerBulletPos = new List<int[]> { };
 
-        static void Setup()
+        static void Setup() //Первоначальная настройка
         {
             Console.SetWindowSize(100, 40);
             Console.CursorVisible = false;
@@ -69,7 +69,7 @@ namespace SpaceImpact
             for (int i = 0; i < mapSizeX + 3; i++)
                 Console.Write("@");
         }
-        static void Draw()
+        static void Draw() //Отрисовка 
         {
             DrawModel(playerY, playerX, playerModel);
             for (int i = 0; i < currentPlayerBulletPos.Count; i += 2)
@@ -82,7 +82,7 @@ namespace SpaceImpact
                 DrawModel(i[0][0],i[0][1],enemyModels[0]);
             }
         }
-        static void Input()
+        static void Input() //Отслеживание ввода 
         {
             pressed = key.TRASH;
             while (Console.KeyAvailable)
@@ -118,7 +118,7 @@ namespace SpaceImpact
                 }
             }
         }
-        static void Logic()
+        static void Logic() //Логика игры
         {
             switch (pressed)
             {
@@ -151,14 +151,15 @@ namespace SpaceImpact
             }
 
             SpawnEnemies(3, currentEnemyPos.Count);
-
             if (timerForBullets >= 2)
             {
                 timerForBullets = 0;
                 MoveBullet();
             }
-        }
-        static void Main()                                         //MAIN
+            MoveEnemy(3);
+            
+        } 
+        static void Main() //MAIN
         {
             Timer speedOfBullet = new Timer(Timer, null, 0, 50);
             Setup();
@@ -169,7 +170,7 @@ namespace SpaceImpact
                 Input();
             }
         }
-        static void SpawnEnemies(int max, int countOfEnemy)
+        static void SpawnEnemies(int max, int countOfEnemy) //Спавн врагов 
         { 
             if(timerForEnemies >= 5 && countOfEnemy < max)
             {
@@ -219,15 +220,7 @@ namespace SpaceImpact
                 }
             }
         }
-        static void MovePlayer(int modY, int modX)
-        {
-            if (playerY + modY + playerModel.GetLength(0) - 1 != mapSizeY && playerY + modY >= 0 && playerX + modX + playerModel[0].Length != mapSizeX && playerX + modX >= 0)
-            {
-                DeleteModel(playerY, playerX, playerModel, currentPlayerPos);
-                InsertModel(playerY += modY, playerX += modX, playerModel, currentPlayerPos);
-            }
-        }
-        static void InsertModel(int y, int x, string[] Model, List<int[]> currentPos)
+        static void InsertModel(int y, int x, string[] Model, List<int[]> currentPos) //Добавить модель в игру (Игрок, пуля, враг)
          {
             for (int i = 0; i < Model.GetLength(0); i++)
             {
@@ -238,26 +231,28 @@ namespace SpaceImpact
                 }
             }
         }
-        static void DeleteModel(int y, int x, string[] Model, List<int[]> currentPos)
+        static void DeleteModel(int y, int x, string[] Model, List<int[]> currentPos, int firstBulCord = 0) //Удалить модель из игры 
         {
             for (int i = 0; i < Model.GetLength(0); i++)
             {
                 for (int j = 0; j < Model[i].Length; j++)
                 {
-                    map[y + i, x + j] = ' ';
+                    map[y + i, x + j] = '\0';
                     Console.SetCursorPosition(x + j + 3, y + i + 1);
                     Console.Write("\b \b");
                 }
             }
             if (Model.Equals(bullet))
-            { 
-                currentPos.RemoveAt(0);
-                currentPos.RemoveAt(0);
+            {
+                if (firstBulCord < 0)
+                    firstBulCord = 0;
+                currentPos.RemoveAt(firstBulCord);
+                currentPos.RemoveAt(firstBulCord);
             }
             else
                 currentPos.Clear(); 
         }
-        static void DrawModel(int y, int x, string[] Model)
+        static void DrawModel(int y, int x, string[] Model) //Отрисовка моделей 
         {
             for (int i = 0; i < Model.GetLength(0); i++)
             {
@@ -268,7 +263,7 @@ namespace SpaceImpact
                 }
             }
         }
-        static void MoveBullet()
+        static void MoveBullet() //Передвижение пуль 
          {
             for(int i = 0; i < currentPlayerBulletPos.Count; i += 2)
             {
@@ -277,14 +272,101 @@ namespace SpaceImpact
                 DeleteModel(y, x, bullet, currentPlayerBulletPos);
                 if (x < (mapSizeX - 3))
                 {
-                    InsertModel(y, x + 2, bullet, currentPlayerBulletPos);
+                    if (!HitCheck(y, x + 2, bullet, currentPlayerBulletPos))
+                        InsertModel(y, x + 2, bullet, currentPlayerBulletPos);
+                    else
+                    {
+                        SearchAndKill(y, x + 3);
+                    }
                 }
+            }
+        }
+        static void MovePlayer(int modY, int modX) //Передвижение игрока 
+        {
+            if (playerY + modY + playerModel.GetLength(0) - 1 != mapSizeY && playerY + modY >= 0 && playerX + modX + playerModel[0].Length != mapSizeX && playerX + modX >= 0)
+            {
+                DeleteModel(playerY, playerX, playerModel, currentPlayerPos);
+                InsertModel(playerY += modY, playerX += modX, playerModel, currentPlayerPos);
+            }
+        }
+        static void MoveEnemy(int modX) //Передвижение врагов 
+        {
+            if (timerForMoveEnemies >= 6)
+            {
+                timerForMoveEnemies = 0;
+                
+
+                foreach (var i in currentEnemyPos.AsEnumerable().Reverse())
+                {
+                    int y = i[0][0];
+                    int x = i[0][1];
+
+                    if (x - modX >= 0)
+                    {
+                        DeleteModel(y, x, enemyModels[0], i);
+                        if (!HitCheck(y, x - modX, enemyModels[0], i))
+                            InsertModel(y, x - modX, enemyModels[0], i);
+                        else
+                        {
+                            currentEnemyPos.Remove(i);
+                            SearchAndKill(y, x - 2, true);
+                        }
+                    }
+                    else
+                    {
+                        DeleteModel(i[0][0], i[0][1], enemyModels[0], i);
+                        currentEnemyPos.Remove(i);
+                    }
+                }
+            }
+        }
+        static bool HitCheck(int y, int x, string[] Model, List<int[]> currentPos) //Проверка попадания 
+        {
+            for (int i = 0; i < Model.GetLength(0); i++)
+            {
+                for (int j = 0; j < Model[i].Length; j++)
+                {
+                    if(map[y + i, x + j] != '\0')
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        static void SearchAndKill(int y, int x, bool enemy = false) //Найти модель по координатам и удалить из игры 
+        {
+            if (!enemy)
+            {
+                foreach (var i in currentEnemyPos)
+                {
+                    if(y >= i[0][0] && y <= i[i.Count - 1][0] && x >= i[0][1] && x <= i[i.Count - 1][1])
+                    {
+                        DeleteModel(i[0][0], i[0][1], enemyModels[0], i);
+                        currentEnemyPos.Remove(i);
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                foreach (var i in currentPlayerBulletPos)
+                {
+                    if (y <= i[0] && i[0] <= y + enemyModels[0].GetLength(0) && x == i[1])
+                    {
+                        DeleteModel(i[0], x, bullet, currentPlayerBulletPos, currentPlayerBulletPos.IndexOf(i) - 1);
+                        Console.SetCursorPosition(0, mapSizeY + 2);
+                        break;
+                    }
+                }
+                var a = 2 + 2;
             }
         }
         static void Timer(object o)
         {
             timerForBullets++;
             timerForEnemies++;
+            timerForMoveEnemies++;
         }
     }
 }
