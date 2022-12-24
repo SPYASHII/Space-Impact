@@ -10,10 +10,14 @@ namespace SpaceImpact
 {
     class Game
     {
+        static System.Media.SoundPlayer fireSound = new System.Media.SoundPlayer(@"G:\Programming\Space Impact\files\sounds\fire.wav");
+        static System.Media.SoundPlayer gameOver = new System.Media.SoundPlayer(@"G:\Programming\Space Impact\files\sounds\gameover.wav");
+        static System.Media.SoundPlayer playerHit = new System.Media.SoundPlayer(@"G:\Programming\Space Impact\files\sounds\playerhit.wav");
+
         static Random enemyPos = new Random();
 
         static string path = @"G:\Programming\Space Impact\files";
-        static int mapSizeY = 30, mapSizeX = 70;
+        static int mapSizeY = 18, mapSizeX = 70;
         static int playerY, playerX, health;
 
         static int timerForBullets = 0, timerForEnemies = 0, timerForMoveEnemies = 0;
@@ -29,6 +33,7 @@ namespace SpaceImpact
         static List<string[]> enemyModels = new List<string[]> { };
 
         static char[,] map = new char[mapSizeY, mapSizeX];
+        static bool gameover = false;
 
         static List<List<int[]>> currentEnemyPos = new List<List<int[]>> {};
         static List<int[]> currentPlayerPos = new List<int[]> { };
@@ -36,8 +41,9 @@ namespace SpaceImpact
 
         static void Setup() //Первоначальная настройка
         {
-            Console.SetWindowSize(100, 40);
+            Console.SetWindowSize(mapSizeX + 3, mapSizeY + 5);
             Console.CursorVisible = false;
+
 
             playerModel = File.ReadAllLines(path + @"\player.txt");
 
@@ -85,6 +91,12 @@ namespace SpaceImpact
             }
             Console.SetCursorPosition(0, mapSizeY + 2);
             Console.Write("|| " + health + " ||");
+            if(gameover)
+            {
+                Console.Clear();
+                Console.SetCursorPosition(Console.WindowWidth/2 - 7,Console.WindowHeight/2);
+                Console.Write("Game Over!");
+            }
         }
         static void Input() //Отслеживание ввода 
         {
@@ -140,8 +152,9 @@ namespace SpaceImpact
                     break;
                 case key.FIRE:
                     if (playerX + playerModel[0].Length < mapSizeX - 1) {
-                    currentPlayerBulletPos.Add(new List<int[]> { });
-                    InsertModel(playerY + playerModel.GetLength(0) - (playerModel.GetLength(0) - 1) / 2 - 1, playerX + playerModel[0].Length, bullet, currentPlayerBulletPos.Last());
+                        currentPlayerBulletPos.Add(new List<int[]> { });
+                        InsertModel(playerY + playerModel.GetLength(0) - (playerModel.GetLength(0) - 1) / 2 - 1, playerX + playerModel[0].Length, bullet, currentPlayerBulletPos.Last());
+                        fireSound.Play();
                     }
                     break;
                 case key.END:
@@ -163,24 +176,33 @@ namespace SpaceImpact
                 MoveBullet();
             }
             MoveEnemy(3);
-            
+
+            if (health <= 0)
+                gameover = true;
         } 
         static void Main() //MAIN
         {
             Timer speedOfBullet = new Timer(Timer, null, 0, 50);
             Setup();
-            while (true)
+            while (!gameover)
             {
                 Logic();
                 Draw();
                 Input();
             }
+            playerHit.Play();
+
+            Thread.Sleep(500);
+
+            gameOver.Play();
+
+            Thread.Sleep(15000);
+            Console.ReadKey();
         }
         static void SpawnEnemies(int max, int countOfEnemy) //Спавн врагов 
         { 
             if(timerForEnemies >= 5 && countOfEnemy < max)
             {
-                //enemyPos.Next(0, mapSizeY);
                 int[] posY = new int [10];
                 int posX = mapSizeX - enemyModels[0][0].Length - 1, y = 0; 
                 bool spawn = false;
@@ -295,7 +317,7 @@ namespace SpaceImpact
         }
         static void MoveEnemy(int modX) //Передвижение врагов 
         {
-            if (timerForMoveEnemies >= 5)
+            if (timerForMoveEnemies >= 3)
             {
                 timerForMoveEnemies = 0;
                 
@@ -340,6 +362,7 @@ namespace SpaceImpact
         }
         static void SearchAndKill(int y, int x, bool enemy = false, bool player = false) //Найти модель по координатам и удалить из игры 
         {
+            int healthBuf = health;
             if (!enemy)
             {
                 foreach (var i in currentEnemyPos)
@@ -375,8 +398,10 @@ namespace SpaceImpact
                         health += 1;
                         break;
                     }
-                }  
+                }
             }
+            if (healthBuf != health)
+                playerHit.Play();
         }
         static void Timer(object o)
         {
