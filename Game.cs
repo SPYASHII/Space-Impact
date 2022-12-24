@@ -10,13 +10,14 @@ namespace SpaceImpact
 {
     class Game
     {
-        static System.Media.SoundPlayer fireSound = new System.Media.SoundPlayer(@"G:\Programming\Space Impact\files\sounds\fire.wav");
-        static System.Media.SoundPlayer gameOver = new System.Media.SoundPlayer(@"G:\Programming\Space Impact\files\sounds\gameover.wav");
-        static System.Media.SoundPlayer playerHit = new System.Media.SoundPlayer(@"G:\Programming\Space Impact\files\sounds\playerhit.wav");
+        static string path = @"G:\Programming\Space Impact\files";
+
+        static System.Media.SoundPlayer fireSound = new System.Media.SoundPlayer(path + @"\sounds\fire.wav");
+        static System.Media.SoundPlayer gameOver = new System.Media.SoundPlayer(path + @"\sounds\gameover.wav");
+        static System.Media.SoundPlayer playerHit = new System.Media.SoundPlayer(path + @"\sounds\playerhit.wav");
 
         static Random enemyPos = new Random();
 
-        static string path = @"G:\Programming\Space Impact\files";
         static int mapSizeY = 18, mapSizeX = 70;
         static int playerY, playerX, health;
 
