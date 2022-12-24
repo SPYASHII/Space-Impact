@@ -14,7 +14,7 @@ namespace SpaceImpact
 
         static string path = @"G:\Programming\Space Impact\files";
         static int mapSizeY = 30, mapSizeX = 70;
-        static int playerY, playerX;
+        static int playerY, playerX, health;
 
         static int timerForBullets = 0, timerForEnemies = 0, timerForMoveEnemies = 0;
 
@@ -43,6 +43,8 @@ namespace SpaceImpact
 
             enemyModels.Add(new string[File.ReadAllLines(path + @"\enemies\enemy0.txt").GetLength(0)]);
             enemyModels[0] = File.ReadAllLines(path + @"\enemies\enemy0.txt");
+
+            health = 3;
 
             playerY = mapSizeY / 2;
             playerX = mapSizeX / 8;
@@ -81,6 +83,8 @@ namespace SpaceImpact
                 if(i.Count > 0)
                 DrawModel(i[0][0],i[0][1],enemyModels[0]);
             }
+            Console.SetCursorPosition(0, mapSizeY + 2);
+            Console.Write("|| " + health + " ||");
         }
         static void Input() //Отслеживание ввода 
         {
@@ -211,7 +215,7 @@ namespace SpaceImpact
                 }
                 else
                 {
-                    posY[y] = enemyPos.Next(0, mapSizeY);
+                    posY[y] = enemyPos.Next(0, mapSizeY - 3);
                     spawn = true;
                 }
 
@@ -283,15 +287,15 @@ namespace SpaceImpact
         {
             if (playerY + modY + playerModel.GetLength(0) - 1 != mapSizeY && playerY + modY >= 0 && playerX + modX + playerModel[0].Length != mapSizeX && playerX + modX >= 0)
             {
-                if (HitCheck(playerY + modY, playerX + modX, playerModel, currentPlayerPos))
-                    SearchAndKill(playerY + modY, playerX + modX);
                 DeleteModel(playerY, playerX, playerModel, currentPlayerPos);
+                if (HitCheck(playerY + modY, playerX + modX, playerModel, currentPlayerPos))
+                    SearchAndKill(playerY + modY, playerX + modX, false, true);
                 InsertModel(playerY += modY, playerX += modX, playerModel, currentPlayerPos);
             }
         }
         static void MoveEnemy(int modX) //Передвижение врагов 
         {
-            if (timerForMoveEnemies >= 6)
+            if (timerForMoveEnemies >= 5)
             {
                 timerForMoveEnemies = 0;
                 
@@ -309,7 +313,7 @@ namespace SpaceImpact
                         else
                         {
                             currentEnemyPos.Remove(i);
-                            SearchAndKill(y, x - 2, true);
+                            SearchAndKill(y, x - modX, true);
                         }
                     }
                     else
@@ -328,7 +332,7 @@ namespace SpaceImpact
                 {
                     if(map[y + i, x + j] != '\0')
                     {
-                        return true;
+                         return true;
                     }
                 }
             }
@@ -350,25 +354,28 @@ namespace SpaceImpact
                         }
                     }
                     else
-                        if ()
+                        if (y <= i[i.Count - 1][0] && x <= i[i.Count - 1][1] && y + playerModel.GetLength(0) >= i[0][0] && x + playerModel[0].Length >= i[0][1])
                         {
                             DeleteModel(i[0][0], i[0][1], enemyModels[0], i);
                             currentEnemyPos.Remove(i);
+                            health -= 1;
                             break;
                         }
                 }
             }
             else
             {
+                health -= 1;
                 foreach (var i in currentPlayerBulletPos)
                 {
-                    if (y <= i[0][0] && i[0][0] <= y + enemyModels[0].GetLength(0) && x == i[0][1])
+                    if ((y <= i[0][0] && i[0][0] <= y + enemyModels[0].GetLength(0)) && (x <= i[1][1] || x <= i[0][1]))
                     {
-                        DeleteModel(i[0][0], x, bullet, i);
+                        DeleteModel(i[0][0], i[0][1], bullet, i);
                         currentPlayerBulletPos.Remove(i);
+                        health += 1;
                         break;
                     }
-                }
+                }  
             }
         }
         static void Timer(object o)
