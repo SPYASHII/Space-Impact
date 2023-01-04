@@ -19,9 +19,9 @@ namespace SpaceImpact
         static Random enemyPos = new Random();
 
         static int mapSizeY = 18, mapSizeX = 70;
-        static int playerY, playerX, health;
+        static int playerY, playerX, health, score;
 
-        static int timerForBullets = 0, timerForEnemies = 0, timerForMoveEnemies = 0;
+        static int timerForBullets = 0, timerForEnemies = 0, timerForBigEnemies = 0, timerForMoveEnemies = 0;
 
         static ConsoleKeyInfo button;
         enum key { UP, DOWN, RIGHT, LEFT, FIRE, END, TRASH }
@@ -51,8 +51,11 @@ namespace SpaceImpact
 
             enemyModels.Add(new string[File.ReadAllLines(path + @"\enemies\enemy0.txt").GetLength(0)]);
             enemyModels[0] = File.ReadAllLines(path + @"\enemies\enemy0.txt");
+            enemyModels.Add(new string[File.ReadAllLines(path + @"\enemies\enemy1.txt").GetLength(0)]);
+            enemyModels[1] = File.ReadAllLines(path + @"\enemies\enemy1.txt");
 
             health = 5;
+            score = 0;
 
             playerY = mapSizeY / 2;
             playerX = mapSizeX / 8;
@@ -87,6 +90,7 @@ namespace SpaceImpact
                 Console.Write("@");
 
             DrawDelHealth();
+            DrawScore();
         }
         static void Draw() //Отрисовка 
         {
@@ -98,10 +102,11 @@ namespace SpaceImpact
             foreach (var i in currentEnemyPos)
             {
                 if(i.Count > 0)
-                DrawModel(i[0][0],i[0][1],enemyModels[0]);
+                DrawModel(i[0][0],i[0][1],enemyModels[i.Last()[0]]);
             }
 
             DrawDelHealth();
+            DrawScore();
             if(gameover)
             {
                 Console.Clear();
@@ -180,13 +185,13 @@ namespace SpaceImpact
                     break;
             }
 
-            SpawnEnemies(10, currentEnemyPos.Count);
+            SpawnEnemies(6, currentEnemyPos.Count);
             if (timerForBullets >= 2)
             {
                 timerForBullets = 0;
                 MoveBullet();
             }
-            MoveEnemy(3);
+            MoveEnemy(2);
 
             if (health <= 0)
                 gameover = true;
@@ -195,46 +200,49 @@ namespace SpaceImpact
         {
             Timer speedOfBullet = new Timer(Timer, null, 0, 50);
             Setup();
-            while (!gameover)
-            {
-                Logic();
-                Draw();
-                Input();
-            }
+                while (!gameover)
+                {
+                    Logic();
+                    Draw();
+                    Input();
+                }
 
-            playerHit.Play();
+                playerHit.Play();
+                Thread.Sleep(500);
 
-            Thread.Sleep(500);
-
-            gameOver.Play();
-
-            Thread.Sleep(15000);
-            Console.ReadKey();
+                gameOver.Play();
+                Thread.Sleep(15000);
         }
         static void SpawnEnemies(int max, int countOfEnemy) //Спавн врагов 
         { 
             if(timerForEnemies >= 5 && countOfEnemy < max)
             {
+                int enemy = 0;
                 int[] posY = new int [10];
-                int posX = mapSizeX - enemyModels[0][0].Length - 1, y = 0; 
+                if (timerForBigEnemies >= 20)
+                {
+                    enemy = 1;
+                    timerForBigEnemies = 0;
+                }
+                int posX = mapSizeX - enemyModels[enemy][0].Length - 1, y = 0; 
                 bool spawn = false;
                 if (currentEnemyPos.Count > 0)
                 {
                     for (int j = 0; j < 10; j++)
                     {
-                        posY[j] = enemyPos.Next(0, mapSizeY - 1);
+                        posY[j] = enemyPos.Next(0, mapSizeY - 2);
                     }
 
                     for (int j = 0; j < posY.Length && !spawn; j++)
                     {
                         foreach (var i in currentEnemyPos)
                         {
-                            if (posY[j] + enemyModels[0].GetLength(0) < i[0][0] || posY[j] > i[i.Count - 1][0])
+                            if (posY[j] + enemyModels[enemy].GetLength(0) < i[0][0] || posY[j] > i[i.Count - 2][0])
                             {
                                 y = j;
                                 spawn = true;
                             }
-                            else if (posX > i[i.Count - 1][1])
+                            else if (posX > i[i.Count - 2][1])
                             {
                                 y = j;
                                 spawn = true;
@@ -256,7 +264,8 @@ namespace SpaceImpact
                 if (spawn) {
                     currentEnemyPos.Add(new List<int[]> { });
                     timerForEnemies = 0;
-                    InsertModel(posY[y], posX, enemyModels[0], currentEnemyPos.Last());
+                    InsertModel(posY[y], posX, enemyModels[enemy], currentEnemyPos.Last());
+                    currentEnemyPos.Last().Add(new int[2] {enemy,enemy});
                 }
             }
         }
@@ -320,6 +329,11 @@ namespace SpaceImpact
                 Console.Write("\b      \b");
             }
         }
+        static void DrawScore()
+        {
+            Console.SetCursorPosition(mapSizeX/2 - 5, 2);
+            Console.Write($"YOUR SCORE: {score}");
+        }
         static void MoveBullet() //Передвижение пуль 
          {
             foreach (var i in currentPlayerBulletPos.AsEnumerable().Reverse())
@@ -353,31 +367,54 @@ namespace SpaceImpact
         }
         static void MoveEnemy(int modX) //Передвижение врагов 
         {
-            if (timerForMoveEnemies >= 3)
+            if (timerForMoveEnemies >= 2)
             {
+                int modXBuf = modX;
+                int modY;
                 timerForMoveEnemies = 0;
-                
 
                 foreach (var i in currentEnemyPos.AsEnumerable().Reverse())
                 {
+                    modX = modXBuf;
+
+                    if (enemyPos.Next() % 2 == 0)
+                        modY = 1;
+                    else
+                        modY = -1;
+
                     int y = i[0][0];
                     int x = i[0][1];
 
+                    if (i.Last()[0] == 0)
+                        modY = 0;
+                    else if (y + modY >= mapSizeY - 3 || y + modY <= 0)
+                        modY *= -1;
+                    else
+                        modX = 1;
+
+                    int enemyModel = i.Last()[0];
+
                     if (x - modX >= 0)
                     {
-                        DeleteModel(y, x, enemyModels[0], i);
-                        if (!HitCheck(y, x - modX, enemyModels[0], i))
-                            InsertModel(y, x - modX, enemyModels[0], i);
-                        else if(SearchAndKill(y, x - modX, true))
+                        DeleteModel(y, x, enemyModels[enemyModel], i);
+                        if (!HitCheck(y + modY, x - modX, enemyModels[enemyModel], i))
+                        {
+                            InsertModel(y + modY, x - modX, enemyModels[enemyModel], i);
+                            i.Add(new int[2] {enemyModel, enemyModel});
+                        }
+                        else if (SearchAndKill(y + modY, x - modX, true, false, enemyModel))
                         {
                             currentEnemyPos.Remove(i);
                         }
                         else
-                            InsertModel(y, x - modX, enemyModels[0], i);
+                        {
+                            InsertModel(y + modY, x - modX, enemyModels[enemyModel], i);
+                            i.Add(new int[2] { enemyModel, enemyModel });
+                        }
                     }
                     else
                     {
-                        DeleteModel(i[0][0], i[0][1], enemyModels[0], i);
+                        DeleteModel(i[0][0], i[0][1], enemyModels[enemyModel], i);
                         currentEnemyPos.Remove(i);
                     }
                 }
@@ -397,7 +434,7 @@ namespace SpaceImpact
             }
             return false;
         }
-        static bool SearchAndKill(int y, int x, bool enemy = false, bool player = false) //Найти модель по координатам и удалить из игры 
+        static bool SearchAndKill(int y, int x, bool enemy = false, bool player = false, int enemyModel = 0) //Найти модель по координатам и удалить из игры 
         {
             bool hit = false;
             if (!enemy)
@@ -406,20 +443,24 @@ namespace SpaceImpact
                 {
                     if (!player)
                     {
-                        if (y >= i[0][0] && y <= i[i.Count - 1][0] && x >= i[0][1] && x <= i[i.Count - 1][1])
+                        if (y >= i[0][0] && y <= i[i.Count - 2][0] && x >= i[0][1] && x <= i[i.Count - 2][1])
                         {
-                            DeleteModel(i[0][0], i[0][1], enemyModels[0], i);
+                            Score(i.Last()[0]);
+
+                            DeleteModel(i[0][0], i[0][1], enemyModels[i.Last()[0]], i);
                             currentEnemyPos.Remove(i);
                             break;
                         }
                     }
                     else
-                        if (y <= i[i.Count - 1][0] && x <= i[i.Count - 1][1] && y + playerModel.GetLength(0) >= i[0][0] && x + playerModel[0].Length >= i[0][1])
+                        if (y <= i[i.Count - 2][0] && x <= i[i.Count - 2][1] && y + playerModel.GetLength(0) >= i[0][0] && x + playerModel[0].Length >= i[0][1])
                         {
-                            DeleteModel(i[0][0], i[0][1], enemyModels[0], i);
+                            DeleteModel(i[0][0], i[0][1], enemyModels[i.Last()[0]], i);
                             currentEnemyPos.Remove(i);
+
                             health -= 1;
                             playerHit.Play();
+
                             DrawDelHealth(false);
                             break;
                         }
@@ -430,17 +471,20 @@ namespace SpaceImpact
                 
                 foreach (var i in currentPlayerBulletPos)
                 {
-                    if ((y <= i[0][0] && i[0][0] <= y + enemyModels[0].GetLength(0)) && (x <= i[1][1] || x <= i[0][1]))
+                    if ((y <= i[0][0] && i[0][0] <= y + enemyModels[enemyModel].GetLength(0)) && (x <= i[1][1] || x <= i[0][1]))
                     {
                         DeleteModel(i[0][0], i[0][1], bullet, i);
                         currentPlayerBulletPos.Remove(i);
+
+                        Score(enemyModel);
+
                         hit = true;
                         break;
                     }
                 }
                 if (!hit)
                 {
-                    if (y <= currentPlayerPos[currentPlayerPos.Count - 1][0] && x <= currentPlayerPos[currentPlayerPos.Count - 1][1] && y + enemyModels[0].GetLength(0) >= currentPlayerPos[0][0] && x + enemyModels[0][0].Length >= currentPlayerPos[0][1]) {
+                    if (y <= currentPlayerPos[currentPlayerPos.Count - 1][0] && x <= currentPlayerPos[currentPlayerPos.Count - 1][1] && y + enemyModels[enemyModel].GetLength(0) >= currentPlayerPos[0][0] && x + enemyModels[enemyModel][0].Length >= currentPlayerPos[0][1]) {
                         hit = true;
                         health -= 1;
                         DrawDelHealth(false);
@@ -449,12 +493,26 @@ namespace SpaceImpact
                 }    
             }
             return hit;
+
+            void Score (int modS)
+            {
+                switch (modS)
+                {
+                    case 0:
+                        score += 10;
+                        break;
+                    case 1:
+                        score += 25;
+                        break;
+                }
+            }
         }
         static void Timer(object o)
         {
             timerForBullets++;
             timerForEnemies++;
             timerForMoveEnemies++;
+            timerForBigEnemies++;
         }
     }
 }
