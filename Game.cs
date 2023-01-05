@@ -10,15 +10,15 @@ namespace SpaceImpact
 {
     class Game
     {
-        static string path = @"G:\Programming\Space Impact\files";
+        static string path = @"..\\Debug\\files";
 
-        static System.Media.SoundPlayer fireSound = new System.Media.SoundPlayer(path + @"\sounds\fire.wav");
-        static System.Media.SoundPlayer gameOver = new System.Media.SoundPlayer(path + @"\sounds\gameover.wav");
-        static System.Media.SoundPlayer playerHit = new System.Media.SoundPlayer(path + @"\sounds\playerhit.wav");
+        static System.Media.SoundPlayer fireSound = new System.Media.SoundPlayer(path + @"\\sounds\\fire.wav");
+        static System.Media.SoundPlayer gameOver = new System.Media.SoundPlayer(path + @"\\sounds\\gameover.wav");
+        static System.Media.SoundPlayer playerHit = new System.Media.SoundPlayer(path + @"\\sounds\\playerhit.wav");
 
         static Random enemyPos = new Random();
 
-        static int mapSizeY = 18, mapSizeX = 70;
+        static int mapSizeY = 18, mapSizeX = 50;
         static int playerY, playerX, health, score;
         static int timerForMoveBullets = 0, timerForEnemyShoot = 0, timerForEnemies = 0, timerForBigEnemies = 0, timerForMoveEnemies = 0;
 
@@ -29,11 +29,11 @@ namespace SpaceImpact
         static string[] bullet = new string[1] { "->" };
         static string[] bulletE = new string[1] { "<-" };
 
-        static string[] playerModel = new string[File.ReadAllLines(path + @"\player.txt").GetLength(0)];
+        static string[] playerModel = new string[File.ReadAllLines(path + @"\\player.txt").GetLength(0)];
         static List<string[]> enemyModels = new List<string[]> { };
 
         static char[,] map = new char[mapSizeY, mapSizeX];
-        static bool gameover = false;
+        static bool gameover = false, exit = false;
 
         static List<List<int[]>> currentEnemyPos = new List<List<int[]>> {};
         static List<int[]> currentPlayerPos = new List<int[]> { };
@@ -44,27 +44,71 @@ namespace SpaceImpact
         static void Main() //MAIN
         {
             Timer speedOfBullet = new Timer(Timer, null, 0, 50);
-            Setup();
-            while (!gameover)
+            while (!exit)
             {
-                Logic();
-                Draw();
-                Input();
+                Menu();
+                if (exit)
+                    break;
+                Setup();
+                while (!gameover && !exit)
+                {
+                    Logic();
+                    Draw();
+                    Input();
+                }
+                if (!exit)
+                {
+                    gameOver.Play();
+                    Thread.Sleep(1000);
+                    Console.ReadKey(true);
+                    gameOver.Stop();
+                }
+            }
+        }
+        static void Menu()
+        {
+            Console.CursorVisible = false;
+
+            Console.Clear();
+
+            Console.ForegroundColor = ConsoleColor.Green;
+
+            Console.SetWindowSize(67, mapSizeY + 5);
+
+            string[] spaceImpact = new string[File.ReadAllLines(path + @"\enemies\enemy0.txt").GetLength(0)];
+            spaceImpact = File.ReadAllLines(path + @"\spaceimpact.txt");
+
+            Console.SetCursorPosition(0, 3);
+
+            foreach(var i in spaceImpact)
+            {
+                Console.WriteLine(i);
             }
 
-            playerHit.Play();
-            Thread.Sleep(500);
+            Console.SetCursorPosition(Console.WindowWidth / 2 - 12, Console.WindowHeight / 2);
+            Console.WriteLine("Press any key to Start");
 
-            gameOver.Play();
-            Thread.Sleep(15000);
+            Console.SetCursorPosition(Console.WindowWidth / 2 - 10, Console.WindowHeight / 2 + 2);
+            Console.WriteLine("Press ESC to Exit");
+
+            button = Console.ReadKey(true);
+            if (button.KeyChar == '\u001b')
+                exit = true;
+
+            Console.Clear();
         }
-
         static void Setup() //Первоначальная настройка
         {
+            gameover = false;
+
+            currentPlayerPos.Clear();
+            currentPlayerBulletPos.Clear();
+            currentEnemyPos.Clear();
+            currentEnemyBulletPos.Clear();
+
+            map = new char[mapSizeY, mapSizeX];
+
             Console.SetWindowSize(mapSizeX + 3, mapSizeY + 5);
-            Console.CursorVisible = false;
-            Console.BackgroundColor = ConsoleColor.Green;
-            Console.ForegroundColor = ConsoleColor.Black;
 
             playerModel = File.ReadAllLines(path + @"\player.txt");
 
@@ -133,7 +177,7 @@ namespace SpaceImpact
             if(gameover)
             {
                 Console.Clear();
-                Console.SetCursorPosition(Console.WindowWidth/2 - 7,Console.WindowHeight/2);
+                Console.SetCursorPosition(Console.WindowWidth/2 - 5,Console.WindowHeight/2);
                 Console.Write("Game Over!");
             }
         }
@@ -197,14 +241,7 @@ namespace SpaceImpact
                     }
                     break;
                 case key.END:
-                    for (int i = 0; i < mapSizeY; i++)
-                    {
-                        for (int j = 0; j < mapSizeX; j++)
-                        {
-                            File.AppendAllText(path + @"\debug.txt", string.Concat(map[i, j]));
-                        }
-                        File.AppendAllText(path + @"\debug.txt", "\n");
-                    }
+                    exit = true;
                     break;
             }
 
@@ -392,6 +429,9 @@ namespace SpaceImpact
         }
         static void DrawDelHealth(bool draw = true)
         {
+            if (health < 0)
+                health = 0;
+
             if (draw)
             {
                 for (int i = 0; i < health; i++)
