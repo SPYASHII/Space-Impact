@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.IO;
 
 namespace SpaceImpact
@@ -22,9 +20,11 @@ namespace SpaceImpact
         static int playerY, playerX, health, score;
         static int timerForMoveBullets = 0, timerForEnemyShoot = 0, timerForEnemies = 0, timerForBigEnemies = 0, timerForMoveEnemies = 0;
 
+        static bool gameover = false, exit = false;
+
         static ConsoleKeyInfo button;
-        enum key { UP, DOWN, RIGHT, LEFT, FIRE, END, TRASH }
-        static key pressed;
+        enum Key { UP, DOWN, RIGHT, LEFT, FIRE, END, TRASH }
+        static Key pressed;
 
         static string[] bullet = new string[1] { "->" };
         static string[] bulletE = new string[1] { "<-" };
@@ -33,7 +33,6 @@ namespace SpaceImpact
         static List<string[]> enemyModels = new List<string[]> { };
 
         static char[,] map = new char[mapSizeY, mapSizeX];
-        static bool gameover = false, exit = false;
 
         static List<List<int[]>> currentEnemyPos = new List<List<int[]>> {};
         static List<int[]> currentPlayerPos = new List<int[]> { };
@@ -50,22 +49,37 @@ namespace SpaceImpact
                 if (exit)
                     break;
                 Setup();
-                while (!gameover && !exit)
+
+                try
                 {
-                    Logic();
-                    Draw();
-                    Input();
+                    while (!gameover && !exit)
+                    {
+                        Logic();
+                        Draw();
+                        Input();
+                    }
                 }
-                if (!exit)
+                catch (Exception exeption)
+            {
+                Console.Beep();
+                Console.Clear();
+
+                Console.WriteLine(exeption.Message);
+
+                Console.ReadKey(true);
+            }
+
+            if (!exit && gameover)
                 {
                     gameOver.Play();
                     Thread.Sleep(1000);
+
                     Console.ReadKey(true);
                     gameOver.Stop();
                 }
             }
         }
-        static void Menu()
+        static void Menu() //Меню 
         {
             Console.CursorVisible = false;
 
@@ -114,6 +128,7 @@ namespace SpaceImpact
 
             enemyModels.Add(new string[File.ReadAllLines(path + @"\enemies\enemy0.txt").GetLength(0)]);
             enemyModels[0] = File.ReadAllLines(path + @"\enemies\enemy0.txt");
+
             enemyModels.Add(new string[File.ReadAllLines(path + @"\enemies\enemy1.txt").GetLength(0)]);
             enemyModels[1] = File.ReadAllLines(path + @"\enemies\enemy1.txt");
 
@@ -123,67 +138,51 @@ namespace SpaceImpact
             playerY = mapSizeY / 2;
             playerX = mapSizeX / 8;
 
+            DrawMap();
+
             InsertModel(playerY, playerX, playerModel, currentPlayerPos);
-
-            for (int j = 0; j < 3; j++)
-            {
-                for (int i = 0; i < mapSizeX + 3; i++)
-                    Console.Write(" ");
-                Console.WriteLine();
-            }
-
-            for (int i = 0; i < mapSizeX + 3; i++)
-                Console.Write("@");
-
-            Console.WriteLine();
-
-            for (int i = 0; i < mapSizeY; i++)
-            {
-                Console.Write("@");
-
-                for (int j = 0; j < mapSizeX + 1; j++)
-                {
-                    Console.Write(" ");
-                }
-
-                Console.WriteLine("@");
-            }
-
-            for (int i = 0; i < mapSizeX + 3; i++)
-                Console.Write("@");
+            DrawModel(playerY, playerX, playerModel);
 
             DrawDelHealth();
             DrawScore();
         }
+
         static void Draw() //Отрисовка 
         {
             DrawModel(playerY, playerX, playerModel);
+
             foreach (var i in currentPlayerBulletPos)
             {
                 DrawModel(i[0][0], i[0][1], bullet);
             }
+
             foreach (var i in currentEnemyBulletPos)
             {
                 DrawModel(i[0][0], i[0][1], bulletE);
             }
+
             foreach (var i in currentEnemyPos)
             {
-                if(i.Count > 0)
                 DrawModel(i[0][0],i[0][1],enemyModels[i.Last()[0]]);
             }
 
             DrawDelHealth();
             DrawScore();
+             
             if(gameover)
             {
                 Console.Clear();
+
                 Console.SetCursorPosition(Console.WindowWidth/2 - 5,Console.WindowHeight/2);
                 Console.Write("Game Over!");
+
+                Console.SetCursorPosition(Console.WindowWidth / 2 - 7, Console.WindowHeight / 2 + 1);
+                Console.Write($"Your Score: {score}");
             }
         }
         static void Input() //Отслеживание ввода 
         {
-            pressed = key.TRASH;
+            pressed = Key.TRASH;
             while (Console.KeyAvailable)
             {
                 button = Console.ReadKey(true);
@@ -192,25 +191,25 @@ namespace SpaceImpact
                 {
                     case 'A':
                     case 'a':
-                        pressed = key.LEFT;
+                        pressed = Key.LEFT;
                         break;
                     case 'D':
                     case 'd':
-                        pressed = key.RIGHT;
+                        pressed = Key.RIGHT;
                         break;
                     case 'W':
                     case 'w':
-                        pressed = key.UP;
+                        pressed = Key.UP;
                         break;
                     case 'S':
                     case 's':
-                        pressed = key.DOWN;
+                        pressed = Key.DOWN;
                         break;
                     case ' ':
-                        pressed = key.FIRE;
+                        pressed = Key.FIRE;
                         break;
                     case '\u001b':
-                        pressed = key.END;
+                        pressed = Key.END;
                         break;
                     default:
                         break;
@@ -221,37 +220,43 @@ namespace SpaceImpact
         {
             switch (pressed)
             {
-                case key.UP:
+                case Key.UP:
                     MovePlayer(-1, 0);
                     break;
-                case key.DOWN:
+                case Key.DOWN:
                     MovePlayer(1, 0);
                     break;
-                case key.LEFT:
+                case Key.LEFT:
                     MovePlayer(0, -1);
                     break;
-                case key.RIGHT:
+                case Key.RIGHT:
                     MovePlayer(0, 1);
                     break;
-                case key.FIRE:
-                    if (playerX + playerModel[0].Length < mapSizeX - 1) {
+                case Key.FIRE:
+                    if (playerX + playerModel[0].Length < mapSizeX - 1) 
+                    {
                         currentPlayerBulletPos.Add(new List<int[]> { });
+
                         InsertModel(playerY + playerModel.GetLength(0) - (playerModel.GetLength(0) - 1) / 2 - 1, playerX + playerModel[0].Length, bullet, currentPlayerBulletPos.Last());
+
                         fireSound.Play();
                     }
                     break;
-                case key.END:
+                case Key.END:
                     exit = true;
                     break;
             }
 
             SpawnEnemies(6, currentEnemyPos.Count);
+
             if (timerForMoveBullets >= 2)
             {
                 timerForMoveBullets = 0;
+
                 MoveBullet(currentPlayerBulletPos, bullet, false);
                 MoveBullet(currentEnemyBulletPos, bulletE, true);
             }
+
             MoveEnemy(2);
             ShootEnemy();
 
@@ -263,15 +268,19 @@ namespace SpaceImpact
         { 
             if(timerForEnemies >= 5 && countOfEnemy < max)
             {
-                int enemy = 0;
+                int enemyType = 0, y = 0;
                 int[] posY = new int [10];
+
+                bool spawn = false;
+
                 if (timerForBigEnemies >= 20)
                 {
-                    enemy = 1;
+                    enemyType = 1;
                     timerForBigEnemies = 0;
                 }
-                int posX = mapSizeX - enemyModels[enemy][0].Length - 1, y = 0; 
-                bool spawn = false;
+
+                int posX = mapSizeX - enemyModels[enemyType][0].Length - 1; 
+                
                 if (currentEnemyPos.Count > 0)
                 {
                     for (int j = 0; j < 10; j++)
@@ -283,7 +292,7 @@ namespace SpaceImpact
                     {
                         foreach (var i in currentEnemyPos)
                         {
-                            if (posY[j] + enemyModels[enemy].GetLength(0) < i[0][0] || posY[j] > i[i.Count - 2][0])
+                            if (posY[j] + enemyModels[enemyType].GetLength(0) < i[0][0] || posY[j] > i[i.Count - 2][0])
                             {
                                 y = j;
                                 spawn = true;
@@ -303,15 +312,18 @@ namespace SpaceImpact
                 }
                 else
                 {
-                    posY[y] = enemyPos.Next(0, mapSizeY - 3);
+                    posY[y] = enemyPos.Next(0, mapSizeY - enemyModels[enemyType].GetLength(0));
                     spawn = true;
                 }
 
-                if (spawn) {
-                    currentEnemyPos.Add(new List<int[]> { });
+                if (spawn) 
+                {
                     timerForEnemies = 0;
-                    InsertModel(posY[y], posX, enemyModels[enemy], currentEnemyPos.Last());
-                    currentEnemyPos.Last().Add(new int[2] {enemy,enemy});
+
+                    currentEnemyPos.Add(new List<int[]> { });
+                    InsertModel(posY[y], posX, enemyModels[enemyType], currentEnemyPos.Last());
+
+                    currentEnemyPos.Last().Add(new int[2] {enemyType,enemyType}); //Добавляем в конец координат каждого врага его тип
                 }
             }
         }
@@ -321,6 +333,7 @@ namespace SpaceImpact
             {
                 int modXBuf = modX;
                 int modY;
+
                 timerForMoveEnemies = 0;
 
                 foreach (var i in currentEnemyPos.AsEnumerable().Reverse())
@@ -342,35 +355,38 @@ namespace SpaceImpact
                     else
                         modX = 1;
 
-                    int enemyModel = i.Last()[0];
+                    int enemyType = i.Last()[0];
 
                     if (x - modX >= 0)
                     {
-                        DeleteModel(y, x, enemyModels[enemyModel], i);
-                        if (!HitCheck(y + modY, x - modX, enemyModels[enemyModel], i))
+                        DeleteModel(y, x, enemyModels[enemyType], i);
+
+                        if (!HitCheck(y + modY, x - modX, enemyModels[enemyType], i))
                         {
-                            InsertModel(y + modY, x - modX, enemyModels[enemyModel], i);
-                            i.Add(new int[2] { enemyModel, enemyModel });
+                            InsertModel(y + modY, x - modX, enemyModels[enemyType], i);
+
+                            i.Add(new int[2] { enemyType, enemyType });
                         }
-                        else if (SearchAndKill(y + modY, x - modX, enemyModels[enemyModel],true, false, enemyModel))
+                        else if (SearchAndKill(y + modY, x - modX, enemyModels[enemyType],true, false, enemyType))
                         {
                             currentEnemyPos.Remove(i);
                         }
                         else
                         {
-                            InsertModel(y + modY, x - modX, enemyModels[enemyModel], i);
-                            i.Add(new int[2] { enemyModel, enemyModel });
+                            InsertModel(y + modY, x - modX, enemyModels[enemyType], i);
+
+                            i.Add(new int[2] { enemyType, enemyType });
                         }
                     }
                     else
                     {
-                        DeleteModel(i[0][0], i[0][1], enemyModels[enemyModel], i);
+                        DeleteModel(i[0][0], i[0][1], enemyModels[enemyType], i);
                         currentEnemyPos.Remove(i);
                     }
                 }
             }
         }
-        static void ShootEnemy()
+        static void ShootEnemy() //Логика для выстрелов врагов
         {
             if(timerForEnemyShoot >= 10)
             {
@@ -378,7 +394,7 @@ namespace SpaceImpact
 
                 foreach(var i in currentEnemyPos)
                 {
-                    if(i.Last()[0] != 0)
+                    if(i.Last()[0] == 1)
                     {
                         if (i[0][1] - 1 > 1)
                         {
@@ -427,7 +443,7 @@ namespace SpaceImpact
                 }
             }
         }
-        static void DrawDelHealth(bool draw = true)
+        static void DrawDelHealth(bool draw = true) //Отрисовка/Удаление HP
         {
             if (health < 0)
                 health = 0;
@@ -454,15 +470,44 @@ namespace SpaceImpact
                 Console.Write("\b      \b");
             }
         }
-        static void DrawScore()
+        static void DrawScore() //Отрисовка счета
         {
             Console.SetCursorPosition(mapSizeX/2 - 5, 2);
             Console.Write($"YOUR SCORE: {score}");
         }
+        static void DrawMap() //Отрисовка карты
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                for (int i = 0; i < mapSizeX + 3; i++)
+                    Console.Write(" ");
+                Console.WriteLine();
+            }
 
+            for (int i = 0; i < mapSizeX + 3; i++)
+                Console.Write("@");
+
+            Console.WriteLine();
+
+            for (int i = 0; i < mapSizeY; i++)
+            {
+                Console.Write("@");
+
+                for (int j = 0; j < mapSizeX + 1; j++)
+                {
+                    Console.Write(" ");
+                }
+
+                Console.WriteLine("@");
+            }
+
+            for (int i = 0; i < mapSizeX + 3; i++)
+                Console.Write("@");
+        }
         static void MoveBullet(List<List<int[]>> currentBulletPos, string[] bullet, bool enemy) //Передвижение пуль 
          {
             int modX = 1;
+
             if(enemy)
                 modX = -1;
 
@@ -472,6 +517,7 @@ namespace SpaceImpact
                 int x = i[0][1];
 
                 DeleteModel(y, x, bullet, i);
+
                 if ((!enemy && x < (mapSizeX - 3)) || (enemy && x > 3))
                 {
                     if (!HitCheck(y, x + 2 * modX, bullet, i))
@@ -479,6 +525,7 @@ namespace SpaceImpact
                     else
                     {
                         currentBulletPos.Remove(i);
+
                         SearchAndKill(y, x + 3 * modX, bullet,enemy);
                     }
                 }
@@ -491,13 +538,15 @@ namespace SpaceImpact
             if (playerY + modY + playerModel.GetLength(0) - 1 != mapSizeY && playerY + modY >= 0 && playerX + modX + playerModel[0].Length != mapSizeX && playerX + modX >= 0)
             {
                 DeleteModel(playerY, playerX, playerModel, currentPlayerPos);
-                if (HitCheck(playerY + modY, playerX + modX, playerModel, currentPlayerPos))
+
+                if (HitCheck(playerY + modY, playerX + modX, playerModel, currentPlayerPos)) //Проверка на то врезался ли игрок во врага или пулю
                     SearchAndKill(playerY + modY, playerX + modX, playerModel,false, true);
+
                 InsertModel(playerY += modY, playerX += modX, playerModel, currentPlayerPos);
             }
         }
         
-        static bool HitCheck(int y, int x, string[] Model, List<int[]> currentPos) //Проверка попадания 
+        static bool HitCheck(int y, int x, string[] Model, List<int[]> currentPos) //Проверка на наличие обьектов по координатам y,x учитывая модель которая появится по этим координатам 
         {
             for (int i = 0; i < Model.GetLength(0); i++)
             {
@@ -509,6 +558,7 @@ namespace SpaceImpact
                     }
                 }
             }
+
             return false;
         }
         static bool SearchAndKill(int y, int x, string[] model, bool enemy = false, bool player = false, int enemyType = 100) //Найти модель по координатам и удалить из игры 
@@ -526,6 +576,7 @@ namespace SpaceImpact
 
                             DeleteModel(i[0][0], i[0][1], enemyModels[i.Last()[0]], i);
                             currentEnemyPos.Remove(i);
+
                             break;
                         }
                     }
@@ -535,6 +586,7 @@ namespace SpaceImpact
                         {
                             DeleteModel(i[0][0], i[0][1], bulletE, i);
                             currentEnemyBulletPos.Remove(i);
+
                             break;
                         }
                     }
@@ -590,17 +642,20 @@ namespace SpaceImpact
                 {
                     if (y <= currentPlayerPos[currentPlayerPos.Count - 1][0] && x <= currentPlayerPos[currentPlayerPos.Count - 1][1] && y + model.GetLength(0) >= currentPlayerPos[0][0] && x + model[0].Length >= currentPlayerPos[0][1]) {
                         hit = true;
+
                         health -= 1;
                         DrawDelHealth(false);
+
                         playerHit.Play();
                     }
                 }    
             }
+
             return hit;
 
-            void Score (int modS)
+            void Score (int eType) //Увеличение счета игрока взависимости от того какого врага он убил
             {
-                switch (modS)
+                switch (eType)
                 {
                     case 0:
                         score += 10;
