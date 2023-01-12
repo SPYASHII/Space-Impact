@@ -1,7 +1,6 @@
 G:\Programming\Space Impact\bin\Debug\Space Impact.exe.config
 G:\Programming\Space Impact\bin\Debug\Space Impact.exe
 G:\Programming\Space Impact\bin\Debug\Space Impact.pdb
-G:\Programming\Space Impact\obj\Debug\Space Impact.csproj.AssemblyReference.cache
 G:\Programming\Space Impact\obj\Debug\Space Impact.csproj.CoreCompileInputs.cache
 G:\Programming\Space Impact\obj\Debug\Space Impact.exe
 G:\Programming\Space Impact\obj\Debug\Space Impact.pdb
